@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import "./App.css";
 import FormInput from "./components/FormInput";
@@ -11,28 +12,116 @@ const App = () => {
     email: "",
     matamask: "",
   });
-  console.log(process.env.REACT_APP_URL);
 
   const [auth,setAuth] = useState({
     discord: "",
-    github: "",
-    discord_disabled: false,
-    github_disabled: false
-  })
+    github: ""
+  });
+  const [disabled, setDisabled] = useState({
+    github: false,
+    discord: true,
+    email: true,
+    matamask: true,
+  });
 
-  useEffect(() => {
-    axios.get(process.env.REACT_APP_URL).then((res) => {
-      setAuth({
-        discord: res.data.discord_auth_url,
-        github: res.data.github_auth_url,
-        discord_disabled: auth.discord_disabled,
-        github_disabled: auth.github_disabled
+  let navigate = useNavigate();
+
+  const fixData = useCallback(() => {
+    axios.get(process.env.REACT_APP_URL).then(({ data }) => {
+      console.log(data)
+      switch(data.connected) {
+        case 0: {
+          setDisabled({
+            github: false,
+            discord: true,
+            email: true,
+            matamask: true,
+          });
+          break;
+        }
+        case 1: {
+          setDisabled({
+            github: true,
+            discord: false,
+            email: false,
+            matamask: false,
+          });
+          break;
+        }
+        case 2: {
+          setDisabled({
+            github: true,
+            discord: true,
+            email: false,
+            matamask: false,
+          });
+          break;
+        }
+        default: {
+          setDisabled({
+            github: true,
+            discord: true,
+            email: true,
+            matamask: true,
+          });
+          break;
+        }
+      }
+      setValues({
+        email: data.email,
+        matamask: data.metamask_address,
       });
-      console.log(res.data);
+      setAuth({
+        discord: data.discord_auth_url,
+        github: data.github_auth_url,
+      });;
     }).catch((err) => {
       console.log(err);
     })
   }, []);
+
+  
+
+  useEffect(() => {
+    let discord, github;
+    if (window.location.hash) discord = window.location.hash.slice(1).split("&").map(hash => hash.split("="))
+    console.log(typeof window.location.search)
+    if (window.location.search) github = window.location.search.slice(1).split("&").map(search => search.split("="));
+    if (discord) {
+      const discordMap = new Map(discord);
+      const token_type = discordMap.get("token_type");
+      const access_token = discordMap.get("access_token");
+      if (token_type && access_token) {
+        axios.post(`${process.env.REACT_APP_URL}discord`, {
+          token_type,
+          access_token,
+        }).then(({ data }) => {
+          console.log(data);
+          navigate("/");
+          fixData();
+        }).catch(err => {
+          console.log(err);
+        })
+      }
+    } else if (github) {
+      const githubMap = new Map(github);
+      const code = githubMap.get("code");
+      console.log(code)
+      if (code) {
+        axios.post(`${process.env.REACT_APP_URL}github`, {
+          code,
+        }).then(({ data }) => {
+          console.log(data);
+          navigate("/");
+          fixData();
+        }).catch(err => {
+          console.log(err);
+        })
+      }
+    } else {
+      fixData();
+    }
+  }, [fixData, navigate]);
 
   
 
@@ -43,7 +132,7 @@ const App = () => {
       type: "email",
       placeholder: "Email",
       label: "Email",
-      required: false,
+      disabled: disabled.email,
     },
 
     {
@@ -53,9 +142,19 @@ const App = () => {
       placeholder: "Metamask Account Address",
       label: "Metamask",
       pattern: `^[0x]{0,1}[A-Za-z0-9]{2,41}$`,
-      required: true,
+      required: false,
+      disabled: disabled.matamask,
     },
   ];
+
+  const handleFormSubmit = () => {
+    axios.post(`${process.env.REACT_APP_URL}submit`, {
+      email: values.email,
+      metamask_address: values.matamask,
+    }).then(({ data }) => {
+      console.log(data);
+    })
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -72,20 +171,26 @@ const App = () => {
         <Content>
           <form onSubmit={handleSubmit}>
             <WelcomeText>Metafy</WelcomeText>
-            <a
-              href={auth.github}
-              alt="github"
-              //disabled={auth.github_disabled}
+            <button
+              disabled={disabled.github}
             >
-              <button>Connect GitHub</button>
-            </a>
-            <a
-              href={auth.discord}
-              alt="discord"
-             // disabled={auth.discord_disabled}
+              <a
+                href={auth.github}
+                alt="github"
+              >
+                Connect GitHub
+              </a>
+            </button>
+            <button
+              disabled={disabled.discord}
             >
-              <button>Connect Discord</button>
-            </a>
+              <a
+                href={auth.discord}
+                alt="discord"
+              >
+                Connect Discord
+              </a>
+            </button>
 
             {inputs.map((input) => (
               <FormInput
@@ -95,6 +200,11 @@ const App = () => {
                 onChange={onChange}
               />
             ))}
+            <button
+              onClick={handleFormSubmit}
+            >
+              Submit
+            </button>
           </form>
         </Content>
       </div>
