@@ -7,13 +7,12 @@ import Spline from "@splinetool/react-spline";
 import styled from "styled-components";
 
 const App = () => {
-
   const [values, setValues] = useState({
     email: "",
     matamask: "",
   });
 
-  const [auth,setAuth] = useState({
+  const [auth, setAuth] = useState({
     discord: "",
     github: ""
   });
@@ -24,7 +23,14 @@ const App = () => {
     matamask: true,
   });
 
+  const isAnonymous = true;
+
   let navigate = useNavigate();
+
+  const handleClick = event => {
+    event.currentTarget.disabled = true;
+    console.log('button clicked');
+  };
 
   const fixData = useCallback(() => {
     axios.get(process.env.REACT_APP_URL).then(({ data }) => {
@@ -132,7 +138,9 @@ const App = () => {
       type: "email",
       placeholder: "Email",
       label: "Email",
-      disabled: disabled.email,
+      
+      className:"form-control",
+      //disabled: disabled.email,
     },
 
     {
@@ -143,7 +151,8 @@ const App = () => {
       label: "Metamask",
       pattern: `^[0x]{0,1}[A-Za-z0-9]{2,41}$`,
       required: false,
-      disabled: disabled.matamask,
+      className:"form-control"
+      //disabled: disabled.matamask,
     },
   ];
 
@@ -167,26 +176,32 @@ const App = () => {
   return (
     <Wrapper>
       <div className="app">
-        <Spline scene="https://prod.spline.design/AOr0YkCXO4I4kPNS/scene.splinecode" />
+      <Spline scene="https://prod.spline.design/l3TZIsNBg6dnwqAO/scene.splinecode" />
         <Content>
           <form onSubmit={handleSubmit}>
             <WelcomeText>Metafy</WelcomeText>
             <button
-              disabled={disabled.github}
+            className="buttons"
+             onClick={handleClick} 
             >
               <a
                 href={auth.github}
                 alt="github"
+                
+                className="button"
               >
                 Connect GitHub
               </a>
             </button>
             <button
-              disabled={disabled.discord}
+              
+              className="buttons"
             >
               <a
                 href={auth.discord}
                 alt="discord"
+                onClick={handleClick}
+                className="button"
               >
                 Connect Discord
               </a>
@@ -201,6 +216,7 @@ const App = () => {
               />
             ))}
             <button
+             className="button_submit"
               onClick={handleFormSubmit}
             >
               Submit
@@ -218,8 +234,6 @@ const Wrapper = styled.div`
   position: relative;
   display: flex;
 
-  
-
     @media (max-width: 1024px) {
       transform: scale(0.8) transform(200px);
     }
@@ -233,7 +247,9 @@ const Wrapper = styled.div`
       margin-left: -600px;
     }
     @media (max-width: 375px) {
-      transform: scale(0.45) transform(-50px);
+      transform: scale(0.5) transform(-50px);
+      width:375px;
+
     }
   }
 `;
@@ -242,9 +258,16 @@ const Content = styled.div`
   position: absolute;
   top: 30px;
   display: flex;
+  margin-left:880px;
   flex-direction: column;
   gap: 70px;
-  margin-top: 40px;
+  margin-top: 90px;
+  min-height:600px;
+  max-height:600px;
+  
+  @media (max-width: 375px) {
+    width:375px;
+  }  
 
   @media (max-width: 1024px) {
     gap: 40px;
@@ -264,8 +287,8 @@ const Content = styled.div`
       font-size: 40px;
       font-width: 300px;
     }
-    @media (max-width: 600px) {
-      padding-top: 250px;
+    @media (max-width: 375px) {
+      width:375px;
     }
   }
   p {
@@ -283,6 +306,9 @@ const Content = styled.div`
 
 const WelcomeText = styled.h2`
   margin: 3rem 0 2rem 0;
+  font-family: "Zen Dots", cursive;
+  letter-spacing: 23.5px;
+  text-transform: uppercase;
 `;
 
 export default App;
