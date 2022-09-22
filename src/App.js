@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { useCookies } from 'react-cookie';
 import axios from "axios";
 import "./App.css";
 import FormInput from "./components/FormInput";
@@ -16,118 +17,141 @@ const App = () => {
     discord: "",
     github: ""
   });
+  const [connect, setConnect] = useState({
+    discord: "Connect Discord",
+    github: "Connect GitHub"
+  })
   const [disabled, setDisabled] = useState({
-    github: false,
-    discord: true,
     email: true,
     matamask: true,
   });
 
-  const isAnonymous = true;
+  // const isAnonymous = true;
+  const [cookies, setCookie] = useCookies(['auth', 'discord']);
+
 
   let navigate = useNavigate();
 
-  const handleClick = event => {
-    event.currentTarget.disabled = true;
-    console.log('button clicked');
-  };
-
-  const fixData = useCallback(() => {
-    axios.get(process.env.REACT_APP_URL).then(({ data }) => {
-      console.log(data)
-      switch(data.connected) {
-        case 0: {
-          setDisabled({
-            github: false,
-            discord: true,
-            email: true,
-            matamask: true,
-          });
-          break;
-        }
-        case 1: {
-          setDisabled({
-            github: true,
-            discord: false,
-            email: false,
-            matamask: false,
-          });
-          break;
-        }
-        case 2: {
-          setDisabled({
-            github: true,
-            discord: true,
-            email: false,
-            matamask: false,
-          });
-          break;
-        }
-        default: {
-          setDisabled({
-            github: true,
-            discord: true,
-            email: true,
-            matamask: true,
-          });
-          break;
-        }
-      }
-      setValues({
-        email: data.email,
-        matamask: data.metamask_address,
-      });
-      setAuth({
-        discord: data.discord_auth_url,
-        github: data.github_auth_url,
-      });;
-    }).catch((err) => {
-      console.log(err);
-    })
-  }, []);
-
-  
-
   useEffect(() => {
     let discord, github;
-    if (window.location.hash) discord = window.location.hash.slice(1).split("&").map(hash => hash.split("="))
-    console.log(typeof window.location.search)
+    if (window.location.hash) discord = window.location.hash.slice(1).split("&").map(hash => hash.split("="));
     if (window.location.search) github = window.location.search.slice(1).split("&").map(search => search.split("="));
     if (discord) {
       const discordMap = new Map(discord);
       const token_type = discordMap.get("token_type");
       const access_token = discordMap.get("access_token");
-      if (token_type && access_token) {
+      if (token_type && access_token && cookies.auth) {
         axios.post(`${process.env.REACT_APP_URL}discord`, {
           token_type,
           access_token,
+        }, {
+          headers: {
+            Authorization: `Bearer ${cookies.auth}`
+          }
         }).then(({ data }) => {
-          console.log(data);
+          setDisabled({
+            email: false,
+            matamask: false,
+          });
+          setCookie('discord', 'connected', { path: '/' });
+          if(data.data.email) {
+            setValues({
+              matamask: data.data.metamask_address,
+              email: data.data.email,
+            });
+          }
+          setConnect({
+            discord: "Connected Discord",
+            github: "Connected GitHub"
+          })
           navigate("/");
-          fixData();
-        }).catch(err => {
-          console.log(err);
-        })
+        }).catch(() => {})
       }
     } else if (github) {
       const githubMap = new Map(github);
       const code = githubMap.get("code");
-      console.log(code)
       if (code) {
+        let body = {};
+        if (cookies.auth) {
+          body = {
+            headers: {
+              Authorization: `Bearer ${cookies.auth}`
+            }
+          }
+        }
         axios.post(`${process.env.REACT_APP_URL}github`, {
           code,
-        }).then(({ data }) => {
-          console.log(data);
+        }, body).then(({ data }) => {
+          setDisabled({
+            email: false,
+            matamask: false,
+          });
+          // setConnect({
+          //   discord: connect.discord,
+          //   github: "GitHub Connected"
+          // });
+          setCookie('auth', data.hash, { path: '/' });
           navigate("/");
-          fixData();
-        }).catch(err => {
-          console.log(err);
+        }).catch(() => {
         })
       }
     } else {
-      fixData();
+      let body = {};
+      if (cookies.auth) {
+        body = {
+          headers: {
+            Authorization: `Bearer ${cookies.auth}`
+          }
+        };
+      }
+      axios.get(`${process.env.REACT_APP_URL}`, body).then(({ data }) => {
+        if (data) {
+          setAuth({
+            discord: data.discord_auth_url,
+            github: data.github_auth_url
+          });
+          switch(data.connected) {
+            case 0: {
+              setDisabled({
+                email: true,
+                matamask: true,
+              });
+              break;
+            }
+            case 1: {
+              setDisabled({
+                email: false,
+                matamask: false,
+              });
+              setConnect({
+                discord: "Connect Discord",
+                github: "GitHub Connected"
+              })
+              break;
+            }
+            case 2: {
+              setDisabled({
+                email: false,
+                matamask: false,
+              });
+              setConnect({
+                discord: "Discord Connected",
+                github: "GitHub Connected"
+              })
+              setValues({
+                email: data.email,
+                matamask: data.metamask_address
+              })
+              break;
+            }
+            default: {
+              break;
+            }
+          }
+        }
+      }).catch(() => {});
     }
-  }, [fixData, navigate]);
+  }, [setCookie, navigate, cookies]);
 
   
 
@@ -140,7 +164,7 @@ const App = () => {
       label: "Email",
       
       className:"form-control",
-      //disabled: disabled.email,
+      disabled: disabled.email,
     },
 
     {
@@ -151,18 +175,23 @@ const App = () => {
       label: "Metamask",
       pattern: `^[0x]{0,1}[A-Za-z0-9]{2,41}$`,
       required: false,
-      className:"form-control"
-      //disabled: disabled.matamask,
+      className:"form-control",
+      disabled: disabled.matamask,
     },
   ];
 
   const handleFormSubmit = () => {
+    if (!cookies.auth) {
+      return;
+    }
     axios.post(`${process.env.REACT_APP_URL}submit`, {
       email: values.email,
       metamask_address: values.matamask,
-    }).then(({ data }) => {
-      console.log(data);
-    })
+    }, {
+      headers: {
+        Authorization: `Bearer ${cookies.auth}`
+      }
+    }).then(() => {})
   }
 
   const handleSubmit = (e) => {
@@ -181,29 +210,28 @@ const App = () => {
           <form onSubmit={handleSubmit}>
             <WelcomeText>Metafy</WelcomeText>
             <button
-            className="buttons"
-             onClick={handleClick} 
+            className="buttons btn-wdr"
+            disabled={cookies.auth ? true: false}
             >
               <a
                 href={auth.github}
                 alt="github"
-                
                 className="button"
               >
-                Connect GitHub
+                {connect.github}
               </a>
             </button>
+
             <button
-              
-              className="buttons"
+              className="buttons btn-wdr"
+              disabled={cookies.discord ? true: false}
             >
               <a
                 href={auth.discord}
                 alt="discord"
-                onClick={handleClick}
                 className="button"
               >
-                Connect Discord
+                {connect.discord}
               </a>
             </button>
 

@@ -105,6 +105,10 @@ button{
   letter-spacing: 3px;
 }
 
+.btn-wdr {
+  width: 270px
+}
+
 .buttons a {
   text-decoration: none;
   color: #fff;
@@ -136,6 +140,10 @@ button{
   text-transform: uppercase;
   font-family: "Zen Dots", cursive;
   letter-spacing: 3px;
+}
+
+.button_submit:active {
+  transform: translateY(3px);
 }
 
 .button {
