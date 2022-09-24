@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
-import { useCookies } from 'react-cookie';
+import { useNavigate } from "react-router-dom";
+import { useCookies } from "react-cookie";
 import axios from "axios";
 import "./App.css";
 import FormInput from "./components/FormInput";
 import Spline from "@splinetool/react-spline";
 import styled from "styled-components";
+import swal from "sweetalert";
 
 const App = () => {
   const [values, setValues] = useState({
@@ -15,57 +16,69 @@ const App = () => {
 
   const [auth, setAuth] = useState({
     discord: "",
-    github: ""
+    github: "",
   });
   const [connect, setConnect] = useState({
     discord: "Connect Discord",
-    github: "Connect GitHub"
-  })
+    github: "Connect GitHub",
+  });
   const [disabled, setDisabled] = useState({
     email: true,
     matamask: true,
   });
-
-  // const isAnonymous = true;
-  const [cookies, setCookie] = useCookies(['auth', 'discord']);
-
+  const [cookies, setCookie] = useCookies(["auth", "discord"]);
 
   let navigate = useNavigate();
 
   useEffect(() => {
     let discord, github;
-    if (window.location.hash) discord = window.location.hash.slice(1).split("&").map(hash => hash.split("="));
-    if (window.location.search) github = window.location.search.slice(1).split("&").map(search => search.split("="));
+    if (window.location.hash)
+      discord = window.location.hash
+        .slice(1)
+        .split("&")
+        .map((hash) => hash.split("="));
+    if (window.location.search)
+      github = window.location.search
+        .slice(1)
+        .split("&")
+        .map((search) => search.split("="));
     if (discord) {
       const discordMap = new Map(discord);
       const token_type = discordMap.get("token_type");
       const access_token = discordMap.get("access_token");
       if (token_type && access_token && cookies.auth) {
-        axios.post(`${process.env.REACT_APP_URL}discord`, {
-          token_type,
-          access_token,
-        }, {
-          headers: {
-            Authorization: `Bearer ${cookies.auth}`
-          }
-        }).then(({ data }) => {
-          setDisabled({
-            email: false,
-            matamask: false,
-          });
-          setCookie('discord', 'connected', { path: '/' });
-          if(data.data.email) {
-            setValues({
-              matamask: data.data.metamask_address,
-              email: data.data.email,
+        axios
+          .post(
+            `${process.env.REACT_APP_URL}discord`,
+            {
+              token_type,
+              access_token,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${cookies.auth}`,
+              },
+            }
+          )
+          .then(({ data }) => {
+            setDisabled({
+              email: false,
+              matamask: false,
             });
-          }
-          setConnect({
-            discord: "Connected Discord",
-            github: "Connected GitHub"
+            setCookie("discord", "connected", { path: "/" });
+            if (data.data.email) {
+              setValues({
+                matamask: data.data.metamask_address,
+                email: data.data.email,
+              });
+            }
+            setConnect({
+              discord: "Connected Discord",
+              github: "Connected GitHub",
+            });
+            navigate("/");
           })
-          navigate("/");
-        }).catch(() => {})
+          .catch(() => {});
       }
     } else if (github) {
       const githubMap = new Map(github);
@@ -75,85 +88,88 @@ const App = () => {
         if (cookies.auth) {
           body = {
             headers: {
-              Authorization: `Bearer ${cookies.auth}`
-            }
-          }
+              Authorization: `Bearer ${cookies.auth}`,
+            },
+          };
         }
-        axios.post(`${process.env.REACT_APP_URL}github`, {
-          code,
-        }, body).then(({ data }) => {
-          setDisabled({
-            email: false,
-            matamask: false,
-          });
-          // setConnect({
-          //   discord: connect.discord,
-          //   github: "GitHub Connected"
-          // });
-          setCookie('auth', data.hash, { path: '/' });
-          navigate("/");
-        }).catch(() => {
-        })
+        axios
+          .post(
+            `${process.env.REACT_APP_URL}github`,
+            {
+              code,
+            },
+            body
+          )
+          .then(({ data }) => {
+            setDisabled({
+              email: false,
+              matamask: false,
+            });
+            setCookie("auth", data.hash, { path: "/" });
+            navigate("/");
+          })
+          .catch(() => {});
       }
     } else {
       let body = {};
       if (cookies.auth) {
         body = {
           headers: {
-            Authorization: `Bearer ${cookies.auth}`
-          }
+            Authorization: `Bearer ${cookies.auth}`,
+          },
         };
       }
-      axios.get(`${process.env.REACT_APP_URL}`, body).then(({ data }) => {
-        if (data) {
-          setAuth({
-            discord: data.discord_auth_url,
-            github: data.github_auth_url
-          });
-          switch(data.connected) {
-            case 0: {
-              setDisabled({
-                email: true,
-                matamask: true,
-              });
-              break;
-            }
-            case 1: {
-              setDisabled({
-                email: false,
-                matamask: false,
-              });
-              setConnect({
-                discord: "Connect Discord",
-                github: "GitHub Connected"
-              })
-              break;
-            }
-            case 2: {
-              setDisabled({
-                email: false,
-                matamask: false,
-              });
-              setConnect({
-                discord: "Discord Connected",
-                github: "GitHub Connected"
-              })
-              setValues({
-                email: data.email,
-                matamask: data.metamask_address
-              })
-              break;
-            }
-            default: {
-              break;
+      axios
+        .get(`${process.env.REACT_APP_URL}`, body)
+        .then(({ data }) => {
+          if (data) {
+            setAuth({
+              discord: data.discord_auth_url,
+              github: data.github_auth_url,
+            });
+            switch (data.connected) {
+              case 0: {
+                setDisabled({
+                  email: true,
+                  matamask: true,
+                });
+                break;
+              }
+              case 1: {
+                setDisabled({
+                  email: false,
+                  matamask: false,
+                });
+                setConnect({
+                  discord: "Connect Discord",
+                  github: "GitHub Connected",
+                });
+                break;
+              }
+              case 2: {
+                setDisabled({
+                  email: false,
+                  matamask: false,
+                });
+                setConnect({
+                  discord: "Discord Connected",
+                  github: "GitHub Connected",
+                });
+                setValues({
+                  email: data.email,
+                  matamask: data.metamask_address,
+                });
+                break;
+              }
+              default: {
+                break;
+              }
             }
           }
-        }
-      }).catch(() => {});
+        })
+        .catch(() => {});
     }
   }, [setCookie, navigate, cookies]);
-
-  
 
   const inputs = [
     {
@@ -162,8 +178,8 @@ const App = () => {
       type: "email",
       placeholder: "Email",
       label: "Email",
-      
-      className:"form-control",
+
+      className: "form-control",
       disabled: disabled.email,
     },
 
@@ -175,7 +191,7 @@ const App = () => {
       label: "Metamask",
       pattern: `^[0x]{0,1}[A-Za-z0-9]{2,41}$`,
       required: false,
-      className:"form-control",
+      className: "form-control",
       disabled: disabled.matamask,
     },
   ];
@@ -184,15 +200,23 @@ const App = () => {
     if (!cookies.auth) {
       return;
     }
-    axios.post(`${process.env.REACT_APP_URL}submit`, {
-      email: values.email,
-      metamask_address: values.matamask,
-    }, {
-      headers: {
-        Authorization: `Bearer ${cookies.auth}`
-      }
-    }).then(() => {})
-  }
+    axios
+      .post(
+        `${process.env.REACT_APP_URL}submit`,
+        {
+          email: values.email,
+          metamask_address: values.matamask,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${cookies.auth}`,
+          },
+        }
+      )
+      .then(() => {
+        swal("All Done!", " Form Successfully Submitted!", "success");
+      });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -205,32 +229,25 @@ const App = () => {
   return (
     <Wrapper>
       <div className="app">
-      <Spline scene="https://prod.spline.design/l3TZIsNBg6dnwqAO/scene.splinecode" />
+        <Spline scene="https://prod.spline.design/l3TZIsNBg6dnwqAO/scene.splinecode" />
+
         <Content>
           <form onSubmit={handleSubmit}>
             <WelcomeText>Metafy</WelcomeText>
             <button
-            className="buttons btn-wdr"
-            disabled={cookies.auth ? true: false}
+              className="buttons btn-wdr"
+              disabled={cookies.auth ? true : false}
             >
-              <a
-                href={auth.github}
-                alt="github"
-                className="button"
-              >
+              <a href={auth.github} alt="github" className="button">
                 {connect.github}
               </a>
             </button>
 
             <button
               className="buttons btn-wdr"
-              disabled={cookies.discord ? true: false}
+              disabled={cookies.discord ? true : false}
             >
-              <a
-                href={auth.discord}
-                alt="discord"
-                className="button"
-              >
+              <a href={auth.discord} alt="discord" className="button">
                 {connect.discord}
               </a>
             </button>
@@ -243,10 +260,8 @@ const App = () => {
                 onChange={onChange}
               />
             ))}
-            <button
-             className="button_submit"
-              onClick={handleFormSubmit}
-            >
+
+            <button className="button_submit" onClick={handleFormSubmit}>
               Submit
             </button>
           </form>
@@ -286,16 +301,16 @@ const Content = styled.div`
   position: absolute;
   top: 30px;
   display: flex;
-  margin-left:880px;
+  margin-left: 880px;
   flex-direction: column;
   gap: 70px;
   margin-top: 90px;
-  min-height:600px;
-  max-height:600px;
-  
+  min-height: 600px;
+  max-height: 600px;
+
   @media (max-width: 375px) {
-    width:375px;
-  }  
+    width: 375px;
+  }
 
   @media (max-width: 1024px) {
     gap: 40px;
@@ -316,7 +331,7 @@ const Content = styled.div`
       font-width: 300px;
     }
     @media (max-width: 375px) {
-      width:375px;
+      width: 375px;
     }
   }
   p {
