@@ -56,6 +56,7 @@ const App = () => {
             },
             {
               headers: {
+                "Access-Control-Allow-Origin": "*",
                 Authorization: `Bearer ${cookies.auth}`,
               },
             }
@@ -88,6 +89,7 @@ const App = () => {
         if (cookies.auth) {
           body = {
             headers: {
+              "Access-Control-Allow-Origin": "*",
               Authorization: `Bearer ${cookies.auth}`,
             },
           };
@@ -115,6 +117,7 @@ const App = () => {
       if (cookies.auth) {
         body = {
           headers: {
+            "Access-Control-Allow-Origin": "*",
             Authorization: `Bearer ${cookies.auth}`,
           },
         };
@@ -209,6 +212,7 @@ const App = () => {
         },
         {
           headers: {
+            "Access-Control-Allow-Origin": "*",
             Authorization: `Bearer ${cookies.auth}`,
           },
         }
