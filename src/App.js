@@ -280,6 +280,10 @@ const Wrapper = styled.div`
   color: #fff;
   position: relative;
   display: flex;
+  min-height:100%;
+  position:fixed;
+  overflow-y:scroll;
+  overflow-x:hidden;
 
     @media (max-width: 1024px) {
       transform: scale(0.8) transform(200px);
@@ -305,10 +309,10 @@ const Content = styled.div`
   position: absolute;
   top: 30px;
   display: flex;
-  margin-left: 880px;
+  margin-left: 950px;
   flex-direction: column;
   gap: 70px;
-  margin-top: 90px;
+  margin-top: 120px;
   min-height: 600px;
   max-height: 600px;
 
