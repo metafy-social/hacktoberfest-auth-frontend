@@ -181,7 +181,7 @@ const App = () => {
       type: "email",
       placeholder: "Email",
       label: "Email",
-
+      required: true,
       className: "form-control",
       disabled: disabled.email,
     },
@@ -208,7 +208,7 @@ const App = () => {
         `${process.env.REACT_APP_URL}submit`,
         {
           email: values.email,
-          metamask_address: values.matamask,
+          metamask_address: values.matamask ?? '',
         },
         {
           headers: {
